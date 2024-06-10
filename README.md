@@ -1,1 +1,1 @@
-# Epilepsy_Y1P2
+# Research-Project-2-Ionic-Modulation-Epilepsy
