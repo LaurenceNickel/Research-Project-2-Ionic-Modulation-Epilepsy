@@ -1,6 +1,7 @@
 import numpy as np
+from brian2 import *
 
-def create_spherical_mask (topology, mask_settings):
+def create_spherical_mask(topology, mask_settings):
     
     x, y, z = topology
     coord_of_stimulus, radius_of_stimulus = mask_settings
@@ -25,7 +26,7 @@ def create_spherical_mask (topology, mask_settings):
 
 #     for neuron_id in range(len(x)):
 
-#         distance_xy = np.sqrt((x[neuron_id] - coord_of_electrode[0])**2 + ((y[neuron_id] - coord_of_electrode[1])**2))
+#         distance_xy = np.sqrt((x[neuron_id] - coord_of_electrode[0])**2 + ((y[neuron_i'd] - coord_of_electrode[1])**2))
 
 #         treatment_mask[neuron_id] = (z[neuron_id] >= coord_of_electrode[2] - height_of_electrode) and (z[neuron_id] <= coord_of_electrode[2] + height_of_electrode) and (distance_xy <= radius_of_electrode)
 
@@ -93,3 +94,52 @@ def populate_electrode_positions (variables):
         coords_of_electrode.append(coord.tolist())
     
     return coords_of_electrode
+
+copy_times = 5
+ms = 1000
+
+variables = {
+
+    # Defining the simulation settings.
+    "run_id": ['Results 1', 'Results 2', 'Results 3', 'Results 4', 'Results 5'],
+    "duration": [4000 * ms] * copy_times,
+    "bounds": [[600, 600, 600]] * copy_times,
+
+    # Defining the network settings.
+    "N": [[13500, 3375]] * copy_times,  # [N_exc, N_inh]
+
+    # Defining the potassium equilibrium potential for both the excitatory and inhibitory neurons.
+    # - Healthy mode: Eke_baseline = -90mV
+    # - Epileptic mode: Eke_baseline = -84mV
+    "Eke_baseline": [-84 * mV] * copy_times,
+    "Eki_baseline": [-90 * mV] * copy_times,
+
+    # Defining the noise affecting the excitatory and inhibitory neurons.
+    "noise_exc": [[0.07, 0.075] * nA] * copy_times,  # OLD: [0.1045, 0.104]
+    "noise_inh": [[0.05, 0.08] * nA] * copy_times,
+
+    # Defining the base probabilities of connections between neurons:
+    # - p_e2e => Probability of an excitatory to excitatory neuron (synapse) connection.
+    # - p_e2i => Probability of an excitatory to inhibitory neuron (synapse) connection.
+    # - p_i2e => Probability of an inhibitory to excitatory neuron (synapse) connection.
+    # - p_i2i => Probability of an inhibitory to inhibitory neuron (synapse) connection.
+    # Normal ranges from 0.7-0.75, to activate sprouting increase the normal by 0.5
+    # This will increase the average number of excitatory connections by 500.
+    "p": [[0.75, 0.35, 0.35, 0.0]] * copy_times,
+
+    # Defining the stimulus settings where with the coordinates of (300, 300, 300) the stimulus will be applied to the middle of the neuron block.
+    "input_signal_file": ['sigmoid-1.0.txt'] * copy_times,
+    "coord_of_stimulus": [[300, 300, 300]] * copy_times,
+    "radius_of_stimulus": [180] * copy_times,
+
+    # Defining the treatment settings.
+    "device_sensitivity": [8 * ms] * copy_times,
+    # Device sensitivity - how frequently to check is firing rate is above the threshold
+    "firing_rate_threshold": [5 * Hz] * copy_times,
+    "Eke_treatment": [-100 * mV] * copy_times,
+    "Eki_treatment": [-90 * mV] * copy_times,
+    "radius_of_electrode": [200] * copy_times,
+    "distance_between_masks": [100] * copy_times,
+}
+
+populate_electrode_positions(variables)
