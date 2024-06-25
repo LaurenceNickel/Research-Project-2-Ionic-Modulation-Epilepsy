@@ -1,19 +1,57 @@
 import numpy as np
 from brian2 import *
 
+
+# Creating a spherical mask based on the passed on topology and mask settings.
 def create_spherical_mask(topology, mask_settings):
     
+    # Retrieving the x-coordinates, y-coordinates, and z-coordinates from the neurons present in the 'topology' and the coordinates and radius from the 'mask_settings'.
     x, y, z = topology
-    coord_of_stimulus, radius_of_stimulus = mask_settings
-    
-    stimulus_mask = np.zeros(len(x))
+    coord_of_mask, radius_of_mask = mask_settings
 
+    # Initializing a variable that will contain for each neuron whether it is in the spherical mask or not.
+    mask = np.zeros(len(x))
+
+    # Looping over every neuron in the 'topology', calculating its distance from the coordinates of the mask and evaluating whether it is smaller than the radius.
     for neuron_id in range(len(x)):
+        distance_xyz = np.sqrt((x[neuron_id] - coord_of_mask[0])**2 + ((y[neuron_id] - coord_of_mask[1])**2) + ((z[neuron_id] - coord_of_mask[2])**2))
+        mask[neuron_id] = (distance_xyz <= radius_of_mask)
 
-        distance_xyz = np.sqrt((x[neuron_id] - coord_of_stimulus[0])**2 + ((y[neuron_id] - coord_of_stimulus[1])**2) + ((z[neuron_id] - coord_of_stimulus[2])**2))
-        stimulus_mask[neuron_id] = (distance_xyz <= radius_of_stimulus)
+    return mask
 
-    return stimulus_mask
+
+# Creating a cubical mask based on the passed on topology and mask settings.
+def create_cubical_mask(topology, mask_settings):
+    
+    # Retrieving the x-coordinates, y-coordinates, and z-coordinates from the neurons present in the 'topology' and the coordinates and edge length from the 'mask_settings'.
+    x, y, z = topology
+    coord_of_mask, edge_length_mask = mask_settings
+
+    # Initializing a variable that will contain for each neuron whether it is in the cubical mask or not.
+    mask = np.zeros(len(x))
+
+    # Looping over every neuron in the 'topology', calculating its distance from the coordinates of the mask and evaluating whether it is smaller than half the edge length.
+    for neuron_id in range(len(x)):
+        within_x = abs(x[neuron_id] - coord_of_mask[0]) <= (edge_length_mask / 2)
+        within_y = abs(y[neuron_id] - coord_of_mask[1]) <= (edge_length_mask / 2)
+        within_z = abs(z[neuron_id] - coord_of_mask[2]) <= (edge_length_mask / 2)
+        mask[neuron_id] = within_x and within_y and within_z
+
+    return mask
+
+
+# Creating a mask that will feature all neurons in the passed on topology.
+def create_all_mask(topology):
+    
+    # Retrieving the x-coordinates, y-coordinates, and z-coordinates from the neurons present in the 'topology'.
+    x, y, z = topology
+
+    # Initializing a variable with all ones such that every neuron in the 'topology' is included in the mask.
+    mask = np.ones(len(x))
+
+    return mask
+
+
 
 # Cylindrical Mask
 
@@ -94,52 +132,3 @@ def populate_electrode_positions (variables):
         coords_of_electrode.append(coord.tolist())
     
     return coords_of_electrode
-
-copy_times = 5
-ms = 1000
-
-variables = {
-
-    # Defining the simulation settings.
-    "run_id": ['Results 1', 'Results 2', 'Results 3', 'Results 4', 'Results 5'],
-    "duration": [4000 * ms] * copy_times,
-    "bounds": [[600, 600, 600]] * copy_times,
-
-    # Defining the network settings.
-    "N": [[13500, 3375]] * copy_times,  # [N_exc, N_inh]
-
-    # Defining the potassium equilibrium potential for both the excitatory and inhibitory neurons.
-    # - Healthy mode: Eke_baseline = -90mV
-    # - Epileptic mode: Eke_baseline = -84mV
-    "Eke_baseline": [-84 * mV] * copy_times,
-    "Eki_baseline": [-90 * mV] * copy_times,
-
-    # Defining the noise affecting the excitatory and inhibitory neurons.
-    "noise_exc": [[0.07, 0.075] * nA] * copy_times,  # OLD: [0.1045, 0.104]
-    "noise_inh": [[0.05, 0.08] * nA] * copy_times,
-
-    # Defining the base probabilities of connections between neurons:
-    # - p_e2e => Probability of an excitatory to excitatory neuron (synapse) connection.
-    # - p_e2i => Probability of an excitatory to inhibitory neuron (synapse) connection.
-    # - p_i2e => Probability of an inhibitory to excitatory neuron (synapse) connection.
-    # - p_i2i => Probability of an inhibitory to inhibitory neuron (synapse) connection.
-    # Normal ranges from 0.7-0.75, to activate sprouting increase the normal by 0.5
-    # This will increase the average number of excitatory connections by 500.
-    "p": [[0.75, 0.35, 0.35, 0.0]] * copy_times,
-
-    # Defining the stimulus settings where with the coordinates of (300, 300, 300) the stimulus will be applied to the middle of the neuron block.
-    "input_signal_file": ['sigmoid-1.0.txt'] * copy_times,
-    "coord_of_stimulus": [[300, 300, 300]] * copy_times,
-    "radius_of_stimulus": [180] * copy_times,
-
-    # Defining the treatment settings.
-    "device_sensitivity": [8 * ms] * copy_times,
-    # Device sensitivity - how frequently to check is firing rate is above the threshold
-    "firing_rate_threshold": [5 * Hz] * copy_times,
-    "Eke_treatment": [-100 * mV] * copy_times,
-    "Eki_treatment": [-90 * mV] * copy_times,
-    "radius_of_electrode": [200] * copy_times,
-    "distance_between_masks": [100] * copy_times,
-}
-
-populate_electrode_positions(variables)
