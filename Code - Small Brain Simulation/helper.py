@@ -22,7 +22,7 @@ def connection_statistics (synpase, N):
 
     return avg_probability, len(synpase.i) / N
 
-def write_network_statistics (synapses, Ns, run_id):
+def write_network_statistics(synapses, Ns, run_id):
     avg_connection_probability, avg_num_connections = connection_statistics(synapses[0], Ns[0]) 
     avg_connection_probability2, avg_num_connections2 = connection_statistics(synapses[1], Ns[0]) 
     avg_connection_probability3, avg_num_connections3 = connection_statistics(synapses[2], Ns[1]) 
