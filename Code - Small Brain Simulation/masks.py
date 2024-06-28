@@ -52,23 +52,25 @@ def create_all_mask(topology):
     return mask
 
 
-
-# Cylindrical Mask
-
-# def create_treatment_mask (topology, treatment_settings):
+# Creating a mask that will feature a percentage of all the neurons in the passed on topology.
+def create_prec_of_all_mask(topology, percentage):
     
-#     x, y, z = topology
-#     coord_of_electrode, radius_of_electrode, height_of_electrode = treatment_settings
-    
-#     treatment_mask = zeros(len(x))
+    # Retrieving the x-coordinates, y-coordinates, and z-coordinates from the neurons present in the 'topology'.
+    x, y, z = topology
 
-#     for neuron_id in range(len(x)):
+    # Randomly generating a list of neuron ids based on the passed on 'percentage'.
+    num_of_neurons_to_include = int((len(x) * percentage) / 100)
+    neuron_sequence = np.random.choice(len(x), num_of_neurons_to_include, replace=False)
 
-#         distance_xy = np.sqrt((x[neuron_id] - coord_of_electrode[0])**2 + ((y[neuron_i'd] - coord_of_electrode[1])**2))
+    # Initializing a variable that will contain for each neuron whether it is in the mask or not.
+    mask = np.zeros(len(x))
 
-#         treatment_mask[neuron_id] = (z[neuron_id] >= coord_of_electrode[2] - height_of_electrode) and (z[neuron_id] <= coord_of_electrode[2] + height_of_electrode) and (distance_xy <= radius_of_electrode)
-
-#     return treatment_mask
+    # Looping over every neuron in the 'topology' and setting its value to 1 if it was included in the 'neuron_sequence' list.
+    for neuron_id in range(len(x)):
+        if neuron_id in neuron_sequence:
+            mask[neuron_id] = 1
+            
+    return mask
 
 
 
