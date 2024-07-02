@@ -28,6 +28,7 @@ def plot_neuron_map (excitatory_topolopy, inhibitory_topology):
 
     plt.plot()
 
+
 def plot_connectivity (central_neuron_id, topology_home, topology_away, synapse_conn, run_id):
     
     x, y, z = topology_away
@@ -156,8 +157,82 @@ def plot_all_hippocampal_topologies(topologies, topology_names, run_id):
     plotly.offline.plot(fig, filename=f'./results/{run_id}/all_hippocampal_topologies.html', auto_open=False)
 
 
+
+# Plotting all the cortex topologies in single 3D plot.
+def plot_all_cortex_topologies(topologies, topology_names, run_id):
+
+    # Initializing a figure.
+    fig = go.Figure()
+
+    # Defining the colors of the different hippocampal regions.
+    colors = ['red', 'blue', 'green', 'purple', 'orange', 'yellow']
+
+    # Defining the shapes of the different types of neurons.
+    shapes = {'excitatory': 'circle', 'inhibitory': 'square'}
+    
+    # Determining the number of topology pairs.
+    num_pairs = len(topologies) // 2
+    
+    # Looping over all the topology pairs.
+    for i in range(num_pairs):
+        
+        # Extracting the excitatory and inhibitory topology for the same region.
+        topology_exc = topologies[i]
+        topology_inh = topologies[i + num_pairs]
+        
+        # Unpacking the topology data.
+        x_exc, y_exc, z_exc = topology_exc
+        x_inh, y_inh, z_inh = topology_inh
+        
+        # Creating excitatory and inhibitory DataFrames with the topology data.
+        data_exc = {
+            'x': x_exc,
+            'y': y_exc,
+            'z': z_exc,
+            'type': 'excitatory'}
+        df_exc = pd.DataFrame(data_exc)
+        data_inh = {
+            'x': x_inh,
+            'y': y_inh,
+            'z': z_inh,
+            'type': 'inhibitory'}
+        df_inh = pd.DataFrame(data_inh)
+        
+        # Plotting the excitatory data.
+        fig.add_trace(go.Scatter3d(
+            x=df_exc['x'],
+            y=df_exc['y'],
+            z=df_exc['z'],
+            mode='markers',
+            marker=dict(size=4, color=colors[i], symbol=shapes['excitatory']),
+            name=topology_names[i]
+        ))
+
+        # Plotting the inhibitory data.
+        fig.add_trace(go.Scatter3d(
+            x=df_inh['x'],
+            y=df_inh['y'],
+            z=df_inh['z'],
+            mode='markers',
+            marker=dict(size=4, color=colors[i], symbol=shapes['inhibitory']),
+            name=topology_names[i+num_pairs]
+        ))
+    
+    # Setting labels for the axes.
+    fig.update_layout(scene=dict(
+        xaxis_title='X axis',
+        yaxis_title='Y axis',
+        zaxis_title='Z axis',
+        aspectmode='manual',
+        aspectratio=dict(x=0.328, y=1.365, z=0.328)
+    ))
+    
+    # Saving the plot as an HTML file.
+    plotly.offline.plot(fig, filename=f'./results/{run_id}/all_cortex_topologies.html', auto_open=False)
+
+
 # Plotting the stimulus and treatment masks in a single 3D plot featuring all the hippocampal topologies.
-def plotting_masks(topologies, topology_names, topology_featuring_masks, masks, run_id):
+def plotting_masks(topologies, topology_names, topology_featuring_masks, masks, excitatory_topologies_lengths, inhibitory_topologies_lengths, run_id):
 
     # Initializing a figure and setting the default color of the points.
     fig = go.Figure()
@@ -165,7 +240,7 @@ def plotting_masks(topologies, topology_names, topology_featuring_masks, masks, 
 
     # Extracting the stimulus mask as well as which topology features the mask and what the color of the corresponding points in the 3D plot should be.
     stimulus_mask = masks[0]
-    stimulus_topology_featuring_mask = topology_featuring_masks[0][0]
+    stimulus_topology_featuring_mask = topology_featuring_masks[0]
     stimulus_color = 'red'
 
     # Extracting the treatment masks as well as which topologies feature the masks and what the color of the corresponding points in the 3D plot should be.
@@ -183,22 +258,97 @@ def plotting_masks(topologies, topology_names, topology_featuring_masks, masks, 
         colors = [default_color] * len(x)
         
         # Highlighting the neurons in the current topology that are part of the stimulus mask.
-        if topology_name == stimulus_topology_featuring_mask:
-            for j, is_in_mask in enumerate(stimulus_mask):
-                if is_in_mask == 1:
-                    colors[j] = stimulus_color
+        if topology_name in stimulus_topology_featuring_mask:
+            if topology_name == "DG_CA3_exc":
+                for j, is_in_mask in enumerate(stimulus_mask[:len(x)]):
+                    if is_in_mask == 1:
+                        colors[j] = stimulus_color
+            else:
+                for j, is_in_mask in enumerate(stimulus_mask[-len(x):]):
+                        if is_in_mask == 1:
+                            colors[j] = stimulus_color
 
         # Highlighting the neurons in the current topology that are part of the excitatory treatment mask.
-        if topology_name == treatment_topology_featuring_mask_exc:
-            for j, is_in_mask in enumerate(treatment_mask_exc):
+        if topology_name in treatment_topology_featuring_mask_exc:
+            # Determine the indices corresponding to the current region
+            if topology_name == 'DG_CA3_exc':
+                length_index1 = len(x)
+                region_mask = treatment_mask_exc[:length_index1]
+            elif topology_name == 'CA1_exc':
+                if 'DG_CA3_exc' in treatment_topology_featuring_mask_exc:
+                    length_index0 = excitatory_topologies_lengths[0]
+                    length_index1 = length_index0 + len(x)
+                else:
+                    length_index0 = 0
+                    length_index1 = len(x)
+                region_mask = treatment_mask_exc[length_index0:length_index1]
+            elif topology_name == 'Sub_exc':
+                if 'DG_CA3_exc' in treatment_topology_featuring_mask_exc:
+                    if 'CA1_exc' in treatment_topology_featuring_mask_exc:
+                        length_index0 = excitatory_topologies_lengths[0] + excitatory_topologies_lengths[1]
+                        length_index1 = length_index0 + len(x)
+                    else:
+                        length_index0 = excitatory_topologies_lengths[0]
+                        length_index1 = length_index0 + len(x)
+                elif 'CA1_exc' in treatment_topology_featuring_mask_exc:
+                    length_index0 = excitatory_topologies_lengths[1]
+                    length_index1 = length_index0 + len(x)
+                else:
+                    length_index0 = 0
+                    length_index1 = len(x)
+                region_mask = treatment_mask_exc[length_index0:length_index1]
+            elif topology_name == 'EC_exc':
+                length_index0 = -len(x)
+                region_mask = treatment_mask_exc[length_index0:]
+            else:
+                region_mask = np.zeros(len(x))
+            
+            # Apply highlighting based on the treatment mask for the current region
+            for j, is_in_mask in enumerate(region_mask):
                 if is_in_mask == 1:
                     colors[j] = treatment_color
+
                     
         # Highlighting the neurons in the current topology that are part of the inhibitory treatment mask.
-        if topology_name == treatment_topology_featuring_mask_inh:
-            for j, is_in_mask in enumerate(treatment_mask_inh):
+        if topology_name in treatment_topology_featuring_mask_inh:
+            # Determine the indices corresponding to the current region
+            if topology_name == 'DG_CA3_inh':
+                length_index1 = len(x)
+                region_mask = treatment_mask_inh[:length_index1]
+            elif topology_name == 'CA1_inh':
+                if 'DG_CA3_inh' in treatment_topology_featuring_mask_inh:
+                    length_index0 = excitatory_topologies_lengths[0]
+                    length_index1 = length_index0 + len(x)
+                else:
+                    length_index0 = 0
+                    length_index1 = len(x)
+                region_mask = treatment_mask_inh[length_index0:length_index1]
+            elif topology_name == 'Sub_inh':
+                if 'DG_CA3_inh' in treatment_topology_featuring_mask_inh:
+                    if 'CA1_inh' in treatment_topology_featuring_mask_inh:
+                        length_index0 = excitatory_topologies_lengths[0] + excitatory_topologies_lengths[1]
+                        length_index1 = length_index0 + len(x)
+                    else:
+                        length_index0 = excitatory_topologies_lengths[0]
+                        length_index1 = length_index0 + len(x)
+                elif 'CA1_inh' in treatment_topology_featuring_mask_inh:
+                    length_index0 = excitatory_topologies_lengths[1]
+                    length_index1 = length_index0 + len(x)
+                else:
+                    length_index0 = 0
+                    length_index1 = len(x)
+                region_mask = treatment_mask_inh[length_index0:length_index1]
+            elif topology_name == 'EC_inh':
+                length_index0 = -len(x)
+                region_mask = treatment_mask_inh[length_index0:]
+            else:
+                region_mask = np.zeros(len(x))
+            
+            # Apply highlighting based on the treatment mask for the current region
+            for j, is_in_mask in enumerate(region_mask):
                 if is_in_mask == 1:
                     colors[j] = treatment_color
+
 
         # Plotting the data while taking into account the defined 'colors' list.
         fig.add_trace(go.Scatter3d(
@@ -219,6 +369,75 @@ def plotting_masks(topologies, topology_names, topology_featuring_masks, masks, 
 
     # Saving the 3D plot as an HTML file.
     plotly.offline.plot(fig, filename=f'./results/{run_id}/all_hippocampal_topologies_with_masks.html', auto_open=False)
+
+
+# Plotting the stimulus and treatment masks in a single 3D plot featuring all the cortex topologies.
+def plotting_masks_cortex(topologies, topology_names, topology_featuring_masks, masks, excitatory_topologies_lengths, inhibitory_topologies_lengths, run_id):
+
+    # Initializing a figure and setting the default color of the points.
+    fig = go.Figure()
+    default_color = 'rgba(0, 0, 255, 0.2)'
+
+    # Extracting the stimulus mask as well as which topology features the mask and what the color of the corresponding points in the 3D plot should be.
+    stimulus_mask = masks[0]
+    stimulus_topology_featuring_mask = topology_featuring_masks[0]
+    stimulus_color = 'red'
+
+    # Extracting the treatment masks as well as which topologies feature the masks and what the color of the corresponding points in the 3D plot should be.
+    treatment_mask_exc, treatment_mask_inh = masks[1]
+    treatment_topology_featuring_mask_exc, treatment_topology_featuring_mask_inh = topology_featuring_masks[1]
+    treatment_color = 'yellow'
+
+    # Iterating over the topologies.
+    for i, (topology, topology_name) in enumerate(zip(topologies, topology_names)):
+        
+        # Unpacking the coordinates of the topology.
+        x, y, z = topology
+        
+        # Creating a list to store the color of each neuron and initializing it with the defined default color.
+        colors = [default_color] * len(x)
+        
+        # Highlighting the neurons in the current topology that are part of the stimulus mask.
+        if topology_name in stimulus_topology_featuring_mask:
+            for j, is_in_mask in enumerate(stimulus_mask):
+                if is_in_mask == 1:
+                    colors[j] = stimulus_color
+
+        # Highlighting the neurons in the current topology that are part of the excitatory treatment mask.
+        if topology_name in treatment_topology_featuring_mask_exc:
+            for j, is_in_mask in enumerate(treatment_mask_exc):
+                if is_in_mask == 1:
+                    colors[j] = treatment_color
+
+                    
+        # Highlighting the neurons in the current topology that are part of the inhibitory treatment mask.
+        if topology_name in treatment_topology_featuring_mask_inh:
+            for j, is_in_mask in enumerate(treatment_mask_inh):
+                if is_in_mask == 1:
+                    colors[j] = treatment_color
+
+
+        # Plotting the data while taking into account the defined 'colors' list.
+        fig.add_trace(go.Scatter3d(
+            x=x,
+            y=y,
+            z=z,
+            mode='markers',
+            marker=dict(size=4, color=colors),
+            name=topology_name
+        ))
+
+    # Setting the labels of the axes.
+    fig.update_layout(scene=dict(
+        xaxis_title='X axis',
+        yaxis_title='Y axis',
+        zaxis_title='Z axis',
+        aspectmode='manual',
+        aspectratio=dict(x=0.328, y=1.365, z=0.328)
+    ))
+
+    # Saving the 3D plot as an HTML file.
+    plotly.offline.plot(fig, filename=f'./results/{run_id}/all_cortex_topologies_with_masks.html', auto_open=False)
                 
 
 def plot_neuron_mask (topology, mask, color, mask_name, run_id):
